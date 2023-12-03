@@ -3,8 +3,35 @@ from qcodes import VisaInstrument, InstrumentChannel
 from typing import Optional
 
 class ZNLE14(VisaInstrument):
+    """
+    ZNLE14 VNA Instrument class.
+
+    Parameters:
+        name (str): Name of the instrument.
+        address (str): VISA address of the instrument.
+        **kwargs: Additional keyword arguments.
+
+    Attributes:
+        _channel_list (dict): Dictionary of available channels.
+
+    Methods:
+        reset(): Reset the instrument.
+        _initialize_submodules(): Initialize submodules for channels, display, and parameters.
+        get_all_traces(): Get all available traces.
+        get_all_channels(): Get all available channels.
+        create_new_channel(channel_num: int): Create a new channel.
+        _get_all_trace_data_parser(raw_data: str): Parse raw trace data.
+    """
 
     def __init__(self, name: str, address: str, **kwargs):
+        """
+        Initialize ZNLE14 VNA Instrument.
+
+        Args:
+            name (str): Name of the instrument.
+            address (str): VISA address of the instrument.
+            **kwargs: Additional keyword arguments.
+        """
         
         super().__init__(name, address, terminator='\r\n', **kwargs)
         self.connect_message()
@@ -19,11 +46,13 @@ class ZNLE14(VisaInstrument):
         )
         
     def reset(self):
+        """Reset the instrument."""
         self.write('*rst')
         self.submodules.clear()
         self._initialize_submodules()
 
     def _initialize_submodules(self):
+        """Initialize submodules for channels, display, and parameters."""
         self._channel_list = self.get_all_channels()
         for channel_num in self._channel_list.keys():
             channel = ZNLE14Channel(parent=self, channel_num=channel_num)
@@ -39,6 +68,7 @@ class ZNLE14(VisaInstrument):
         self.add_submodule('params', params)
         
     def get_all_traces(self):
+        """Get all available traces."""
         traces = self.ask('conf:trac:cat?').strip()
         trace_nums = traces.split(',')[0::2]
         trace_names = traces.split(',')[1::2]
@@ -46,6 +76,7 @@ class ZNLE14(VisaInstrument):
         return traces
     
     def get_all_channels(self):
+        """Get all available channels."""
         channels = self.ask('conf:chan:cat?').strip()
         channel_nums = channels.split(',')[0::2]
         channel_names = channels.split(',')[1::2]
@@ -53,6 +84,7 @@ class ZNLE14(VisaInstrument):
         return channels
 
     def create_new_channel(self, channel_num: int):
+        """Create a new channel."""
         if str(channel_num) in list(self.get_all_channels().keys()):
             raise AttributeError("Channel with this number already exists.")
         else:
@@ -62,6 +94,7 @@ class ZNLE14(VisaInstrument):
         self._channel_list = self.get_all_channels()
         
     def _get_all_trace_data_parser(self, raw_data: str):
+        """Parse raw trace data."""
         data = raw_data.strip().split(',')
         data = [float(point) for point in data]
         i_all = data[0::2]
@@ -75,8 +108,31 @@ class ZNLE14(VisaInstrument):
         return i_s, q_s
     
 class ZNLE14Channel(InstrumentChannel):
+    """
+    ZNLE14 Channel class.
+
+    Parameters:
+        parent (ZNLE14): Parent instrument.
+        channel_num (int): Channel number.
+
+    Attributes:
+        _channel_num (int): Channel number.
+        _channel_name (str): Channel name.
+
+    Methods:
+        create_new_trace(trace_num: int, s_param: Optional[str] = None, pre_existing: Optional[bool] = False): Create a new trace.
+        get_all_traces_in_channel(): Get all traces in the channel.
+        _get_all_trace_data_parser(raw_data: str): Parse raw trace data.
+    """
     
     def __init__(self, parent: ZNLE14, channel_num: int) -> None:
+        """
+        Initialize ZNLE14 Channel.
+
+        Args:
+            parent (ZNLE14): Parent instrument.
+            channel_num (int): Channel number.
+        """
         
         self._channel_num = channel_num
         self._channel_name = f"Ch{self._channel_num}"
@@ -91,6 +147,7 @@ class ZNLE14Channel(InstrumentChannel):
         )
                 
     def create_new_trace(self, trace_num: int, s_param: Optional[str] = None, pre_existing: Optional[bool] = False):
+        """Create a new trace."""
         if pre_existing:
             trace = ZNLE14ChannelTrace(self, trace_num, 'S21')
             self.add_submodule(trace._trace_name.lower(), trace)
@@ -106,6 +163,7 @@ class ZNLE14Channel(InstrumentChannel):
         self._channel_traces = self.get_all_traces_in_channel()
                         
     def get_all_traces_in_channel(self):
+        """Get all traces in the channel."""
         traces = self._parent.ask(f'conf:chan{self._channel_num}:trac:cat?').strip()
         trace_nums = traces.split(',')[0::2]
         trace_names = traces.split(',')[1::2]
@@ -113,6 +171,7 @@ class ZNLE14Channel(InstrumentChannel):
         return traces
     
     def _get_all_trace_data_parser(self, raw_data: str):
+        """Parse raw trace data."""
         data = raw_data.strip().split(',')
         data = [float(point) for point in data]
         i_all = data[0::2]
@@ -126,9 +185,36 @@ class ZNLE14Channel(InstrumentChannel):
         return i_s, q_s
     
 class ZNLE14ChannelTrace(InstrumentChannel):
+    """
+    ZNLE14 Channel Trace class.
+
+    Parameters:
+        parent (ZNLE14Channel): Parent channel.
+        trace_num (int): Trace number.
+        s_param (Optional[str]): S-parameter name.
+
+    Attributes:
+        _trace_name (str): Trace name.
+        _s_param (Optional[str]): S-parameter name.
+        _channel_name (str): Channel name.
+
+    Methods:
+        set_as_active(): Set the trace as active.
+        delete_trace(): Delete the trace.
+        _iq_trace_parser(raw_data: str): Parse IQ trace data.
+        _iq_point_parser(raw_data: str): Parse IQ point data.
+    """
     
     def __init__(self, parent: ZNLE14Channel, trace_num: int, s_param: Optional[str] = None) -> None:
-        
+        """
+        Initialize ZNLE14 Channel Trace.
+
+        Args:
+            parent (ZNLE14Channel): Parent channel.
+            trace_num (int): Trace number.
+            s_param (Optional[str]): S-parameter name.
+        """
+
         self._trace_name = f"Trc{trace_num}"
         self._s_param = s_param
 
@@ -150,7 +236,17 @@ class ZNLE14ChannelTrace(InstrumentChannel):
             label='Real and Imaginary Point Data'
         )
         
+    def set_as_active(self):
+        """Set the trace as active."""
+        self._parent._parent.write(f'calc{self._parent._channel_num}:par:sel {self._trace_name}')
+        
+    def delete_trace(self):
+        """Delete the trace."""
+        self._parent._parent.write(f":calc:par:del '{self._trace_name}'")
+        self._parent.submodules.pop(self._label)
+
     def _iq_trace_parser(self, raw_data: str):
+        """Parse IQ trace data."""
         data = raw_data.strip().split(',')
         data = [float(point) for point in data]
         i = data[0::2]
@@ -159,23 +255,35 @@ class ZNLE14ChannelTrace(InstrumentChannel):
         return i, q
     
     def _iq_point_parser(self, raw_data: str):
+        """Parse IQ point data."""
         data = raw_data.strip().split(',')
         data = [float(point) for point in data]
         i = data[0::2]
         q = data[1::2]
         
         return np.mean(i), np.mean(q)
-        
-    def set_as_active(self):
-        self._parent._parent.write(f'calc{self._parent._channel_num}:par:sel {self._trace_name}')
-        
-    def delete_trace(self):
-        self._parent._parent.write(f":calc:par:del '{self._trace_name}'")
-        self._parent.submodules.pop(self._label)
 
 class ZNLE14Display(InstrumentChannel):
+    """
+    ZNLE14 Display class.
+
+    Parameters:
+        parent (ZNLE14Channel): Parent channel.
+
+    Methods:
+        get_all_windows(): Get all available windows.
+        create_a_new_disp_window(window_num: Optional[int] = None): Create a new display window.
+        add_trace_to_new_window(trace: ZNLE14ChannelTrace, window_num: Optional[int] = None): Add a trace to a new window.
+        autoscale_on_all_windows(): Autoscale on all windows.
+    """
     
     def __init__(self, parent: ZNLE14Channel) -> None:
+        """
+        Initialize ZNLE14 Display.
+
+        Args:
+            parent (ZNLE14Channel): Parent channel.
+        """
 
         super().__init__(parent, 'display')
         
@@ -185,6 +293,7 @@ class ZNLE14Display(InstrumentChannel):
             self.add_submodule(window._window_name, window)
         
     def get_all_windows(self):
+        """Get all available windows."""
         windows = self._parent.ask('disp:wind:cat?').strip()
         window_nums = windows.split(',')[0::2]
         window_names = windows.split(',')[1::2]
@@ -192,6 +301,7 @@ class ZNLE14Display(InstrumentChannel):
         return windows
     
     def create_a_new_disp_window(self, window_num: Optional[int] = None):
+        """Create a new display window."""
         if window_num is None:
             window_nums = list(self._windows_dict.keys())
             window_nums = [int(x) for x in window_nums]
@@ -205,6 +315,7 @@ class ZNLE14Display(InstrumentChannel):
         self._windows_dict = self.get_all_windows()
         
     def add_trace_to_new_window(self, trace: ZNLE14ChannelTrace, window_num: Optional[int] = None):
+        """Add a trace to a new window."""
         self.create_a_new_disp_window(window_num=window_num)
         self._parent.write(f'disp:wind{window_num}:trac:efe "{trace._trace_name}"')
         
@@ -214,14 +325,33 @@ class ZNLE14Display(InstrumentChannel):
         self._windows_dict = self.get_all_windows()
         
     def autoscale_on_all_windows(self):
+        """Autoscale on all windows."""
         window_nums = self._windows_dict.keys()
         window_nums = [int(num) for num in window_nums]
         for window_num in window_nums:
             self.write(f'disp:wind{window_num}:trac:y:auto once')
 
 class ZNLE14DisplayWindow(InstrumentChannel):
+    """
+    ZNLE14 Display Window class.
+
+    Parameters:
+        parent (ZNLE14Display): Parent display.
+        window_num (int): Window number.
+
+    Methods:
+        add_trace(trace: ZNLE14ChannelTrace): Add a trace to the window.
+        autoscale_on(): Autoscale on the window.
+    """
     
     def __init__(self, parent: ZNLE14Display, window_num: int) -> None:
+        """
+        Initialize ZNLE14 Display Window.
+
+        Args:
+            parent (ZNLE14Display): Parent display.
+            window_num (int): Window number.
+        """
         
         self._window_num = window_num
         self._window_name = f'win{self._window_num}'
@@ -229,14 +359,34 @@ class ZNLE14DisplayWindow(InstrumentChannel):
         super().__init__(parent, self._window_name)
         
     def add_trace(self, trace: ZNLE14ChannelTrace):
+        """Add a trace to the window."""
         self._parent.write(f'disp:wind{self._window_num}:trac:efe "{trace._trace_name}"')
         
     def autoscale_on(self):
+        """Autoscale on the window."""
         self.write(f'disp:wind{self._window_num}:trac:y:auto once')
 
 class ZNLEParams(InstrumentChannel):
+    """
+    ZNLE14 Parameters class.
+
+    Parameters:
+        parent (ZNLE14Display): Parent display.
+
+    Methods:
+        get_freq_setpoints(): Get frequency setpoints.
+        _sweep_type_parser(sweep_type: str): Parse sweep type.
+        _get_state_parser(state: str): Parse state.
+        _set_state_parser(state): Set state.
+    """
     
     def __init__(self, parent: ZNLE14Display) -> None:
+        """
+        Initialize ZNLE14 Parameters.
+
+        Args:
+            parent (ZNLE14Display): Parent display.
+        """
 
         super().__init__(parent, 'params')
         
@@ -333,6 +483,7 @@ class ZNLEParams(InstrumentChannel):
         )
         
     def get_freq_setpoints(self):
+        """Get frequency setpoints."""
         start = self.freq_start.get()
         stop = self.freq_stop.get()
         num_points = self.sweep_points.get()
@@ -346,18 +497,21 @@ class ZNLEParams(InstrumentChannel):
         return setpoints
         
     def _sweep_type_parser(self, sweep_type):
+        """Parse sweep type."""
         if sweep_type not in self._sweep_types:
             raise AttributeError(f'Sweep type must be in {list(self._sweep_types.keys())}. Check instrument._sweep_types.')
         else:
             return sweep_type
             
     def _get_state_parser(self, state):
+        """Parse state."""
         if state == '0':
             return True
         else:
             return False
         
     def _set_state_parser(self, state):
+        """Set state."""
         if state:
             return '1'
         else:

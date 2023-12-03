@@ -95,21 +95,19 @@ def create_1_transmission(meander_config, hole_config=None):
     """
     Create a GDSII transmission resonator using the specified configurator.
 
-    This function generates a GDSII transmission resonator based on the provided configurator object.
+    This function generates a GDSII transmission resonator based on the provided configurator objects.
     The configurator defines the geometry and properties of the transmission resonator. Units are in microns by default.
 
     Parameters:
         configurator (TransmissionResonatorConfigurator): An instance of the TransmissionResonatorConfigurator
             class that defines the configuration for the transmission resonator.
+        hole_configurator (HoleConfiguration): An instance of the HoleConfiguration class that defines the configuration
+            for the holes around the resonator meander. This should contain the radius of the holes.
 
     Returns:
-        tuple: A tuple containing three GDSII Path objects representing the transmission resonator paths and,
-        if touch pads are included, two GDSII Polygon objects for the touch pads.
-
-    Example:
-        configurator = TransmissionResonatorConfigurator(path_width=15, path3_width=95, gap=10, inner_angle=50,
-                                                         length_of_one_segment=700, total_loops=4)
-        path1, path2, path3 = create_1_transmission(configurator)
+        tuple: A tuple containing three GDSII Path objects representing the transmission resonator paths,
+        if touch pads are included, two GDSII Polygon objects for the touch pads and, if holes are included, all GDSII
+        Circle objects.
     """
     
     path_width = meander_config.path_width
@@ -270,6 +268,7 @@ def create_1_transmission(meander_config, hole_config=None):
     
 def create_1_hanger(config):
     """
+    THIS IS AN OLD FUNCTION. USE HANGER ARRAY FUNCTION INSTEAD -> create_hangers_array().
     Create 1 GDSII hanger resonator. Doesn't create touch pads or holes. Returns 3 paths, 2 for the meander and a third one that
     envelops the meander for holes. Units are in microns by default.
 
