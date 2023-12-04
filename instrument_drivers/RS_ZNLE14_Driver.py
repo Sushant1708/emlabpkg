@@ -1,6 +1,5 @@
 import numpy as np
 from qcodes import VisaInstrument, InstrumentChannel
-from typing import Optional
 
 class ZNLE14(VisaInstrument):
     """
@@ -146,7 +145,7 @@ class ZNLE14Channel(InstrumentChannel):
             label='IQ Trace for all Traces in Channels'
         )
                 
-    def create_new_trace(self, trace_num: int, s_param: Optional[str] = None, pre_existing: Optional[bool] = False):
+    def create_new_trace(self, trace_num: int, s_param: str = None, pre_existing: bool = False):
         """Create a new trace."""
         if pre_existing:
             trace = ZNLE14ChannelTrace(self, trace_num, 'S21')
@@ -205,7 +204,7 @@ class ZNLE14ChannelTrace(InstrumentChannel):
         _iq_point_parser(raw_data: str): Parse IQ point data.
     """
     
-    def __init__(self, parent: ZNLE14Channel, trace_num: int, s_param: Optional[str] = None) -> None:
+    def __init__(self, parent: ZNLE14Channel, trace_num: int, s_param: str = None) -> None:
         """
         Initialize ZNLE14 Channel Trace.
 
@@ -300,7 +299,7 @@ class ZNLE14Display(InstrumentChannel):
         windows = {num.strip("'") : name.strip("'") for num, name in zip(window_nums, window_names)}
         return windows
     
-    def create_a_new_disp_window(self, window_num: Optional[int] = None):
+    def create_a_new_disp_window(self, window_num: int = None):
         """Create a new display window."""
         if window_num is None:
             window_nums = list(self._windows_dict.keys())
@@ -314,7 +313,7 @@ class ZNLE14Display(InstrumentChannel):
         
         self._windows_dict = self.get_all_windows()
         
-    def add_trace_to_new_window(self, trace: ZNLE14ChannelTrace, window_num: Optional[int] = None):
+    def add_trace_to_new_window(self, trace: ZNLE14ChannelTrace, window_num: int = None):
         """Add a trace to a new window."""
         self.create_a_new_disp_window(window_num=window_num)
         self._parent.write(f'disp:wind{window_num}:trac:efe "{trace._trace_name}"')
